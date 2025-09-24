@@ -2,6 +2,7 @@ services:
   - type: web
     name: romy-backend
     env: python
+    pythonVersion: 3.11
     region: frankfurt
     plan: free
     branch: main
