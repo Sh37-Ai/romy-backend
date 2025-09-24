@@ -1,29 +1,26 @@
-# Utiliser Python 3.10
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Installer les dépendances système nécessaires
 RUN apt-get update && apt-get install -y build-essential
 
-# Copier requirements.txt
 COPY requirements.txt .
 
-# Mettre à jour pip et installer numpy en premier pour éviter les incompatibilités
+# Mettre à jour pip
 RUN pip install --upgrade pip
+
+# Installer numpy avant les autres packages pour éviter le conflit binaire
 RUN pip install --no-cache-dir numpy==1.26.4
+
+# Installer les autres dépendances
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copier tout le code
 COPY . .
 
-# Variables d'environnement pour Flask
 ENV FLASK_APP=.
 ENV FLASK_RUN_HOST=0.0.0.0
 ENV FLASK_RUN_PORT=8000
 
-# Exposer le port
 EXPOSE 8000
 
-# Lancer avec gunicorn
 CMD ["gunicorn", "__init__:app", "--bind", "0.0.0.0:8000"]
