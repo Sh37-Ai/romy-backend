@@ -11,7 +11,10 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 # --- Initialiser Firebase une seule fois ---
-JSON_PATH = os.environ.get("SERVICE_ACCOUNT_PATH", "/run/secrets/serviceAccountKey.json")
+JSON_PATH = os.environ.get("SERVICE_ACCOUNT_PATH")  # Render fournira ce secret
+if not JSON_PATH:
+    # Fallback local
+    JSON_PATH = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
 
 COLLECTION_NAME = "choixxx"
 
