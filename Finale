@@ -1,0 +1,78 @@
+import pandas as pd
+import firebase_admin
+from firebase_admin import credentials, firestore
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+class RorschachClassifier:
+    def __init__(self, csv_path: str, json_path: str, collection_name: str):
+        """
+        Args:
+            csv_path (str): chemin vers le CSV des données d'entraînement
+            json_path (str): chemin vers le fichier serviceAccountKey.json
+            collection_name (str): nom de la collection Firestore
+        """
+        self.csv_path = csv_path
+        self.json_path = json_path
+        self.collection_name = collection_name
+
+        # --- Charger et préparer le dataset ---
+        df = pd.read_csv(csv_path, encoding="utf-8")
+        self.columns = df.drop("Label", axis=1).columns
+        X = pd.get_dummies(df.drop("Label", axis=1))
+        y = df["Label"]
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=45)
+
+        # --- Entraîner le modèle ---
+        self.model = RandomForestClassifier(n_estimators=1000, random_state=45)
+        self.model.fit(X_train, y_train)
+
+        # --- Évaluation ---
+        y_pred = self.model.predict(X_test)
+        print("\nAccuracy:", accuracy_score(y_test, y_pred))
+        print("\nRapport de classification :\n", classification_report(y_test, y_pred))
+
+        # --- Initialiser Firebase ---
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(json_path)
+            firebase_admin.initialize_app(cred)
+        self.db = firestore.client()
+
+    def get_user_choices(self, user_uid: str):
+        """Récupère les choix d'un utilisateur depuis Firestore."""
+        choix_data = []
+        try:
+            docs = self.db.collection(self.collection_name).get()
+            for doc in docs:
+                data = doc.to_dict()
+                if data.get("UserId") == user_uid:
+                    choix_data.append(data.get("valeur", []))
+        except Exception as e:
+            print("Erreur lors de la récupération des documents :", e)
+        return choix_data
+
+    def predict_user(self, user_uid: str):
+        """Prédit le label pour un utilisateur donné."""
+        user_choices_list = self.get_user_choices(user_uid)
+        if not user_choices_list:
+            print(f"Aucun choix trouvé pour l'utilisateur {user_uid}.")
+            return None
+
+        # On prend le dernier document
+        user_choices = user_choices_list[-1]
+        test_example = pd.DataFrame([user_choices], columns=self.columns)
+        test_encoded = pd.get_dummies(test_example).reindex(columns=self.model.feature_names_in_, fill_value=0)
+        prediction = self.model.predict(test_encoded)
+        return prediction[0]
+
+# --- Exemple d'utilisation ---
+if __name__ == "__main__":
+    CSV_PATH = r"C:\Users\salah\TestIARumy\rorschach_30000_9reponses_corr.csv"
+    JSON_PATH = r"C:\Users\salah\TestIARumy\serviceAccountKey.json"
+    COLLECTION_NAME = "choixxx"
+    USER_UID = "qUsu0HS3kYWSwevEFHiHL0Ad0Hw2"
+
+    classifier = RorschachClassifier(CSV_PATH, JSON_PATH, COLLECTION_NAME)
+    result = classifier.predict_user(USER_UID)
+    print("Résultat pour l'utilisateur :", result)

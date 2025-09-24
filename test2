@@ -1,0 +1,39 @@
+import pandas as pd
+import numpy as np
+
+np.random.seed(42)
+
+reponses = ["Figures humaines", "Deux personnages", "Papillons", "Interaction", 
+            "Créatures", "Figures menaçantes", "Formes agressives", "Animaux puissants", "Visages"]
+
+labels = ["Anxiété", "Confiance", "Dépression", "Humeur instable", "Impulsivité", "Paranoïa"]
+
+label_corr_prob = {
+    "Anxiété": {"Figures menaçantes": 0.5, "Formes agressives": 0.3, "Figures humaines": 0.2},
+    "Confiance": {"Papillons": 0.5, "Visages": 0.3, "Créatures": 0.2},
+    "Dépression": {"Figures humaines": 0.5, "Interaction": 0.3, "Animaux puissants": 0.2},
+    "Humeur instable": {"Deux personnages": 0.5, "Interaction": 0.3, "Papillons": 0.2},
+    "Impulsivité": {"Interaction": 0.5, "Deux personnages": 0.3, "Formes agressives": 0.2},
+    "Paranoïa": {"Figures menaçantes": 0.5, "Formes agressives": 0.3, "Visages": 0.2}
+}
+
+n_individus = 1000
+n_reponses = 9
+data = []
+
+for _ in range(n_individus):
+    label = np.random.choice(labels)
+    reponses_label = []
+    for _ in range(n_reponses):
+        reponses_label.append(np.random.choice(
+            list(label_corr_prob[label].keys()), 
+            p=list(label_corr_prob[label].values())
+        ))
+    # Ajouter un peu de bruit
+    for i in range(2):  # remplacer 2 réponses sur 9 par aléatoire
+        reponses_label[np.random.randint(n_reponses)] = np.random.choice(reponses)
+    data.append(reponses_label + [label])
+
+df = pd.DataFrame(data, columns=[f"Réponse{i+1}" for i in range(n_reponses)] + ["Label"])
+df.to_csv("rorschach_realistic.csv", index=False)
+print(df.head())

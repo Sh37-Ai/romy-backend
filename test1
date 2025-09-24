@@ -1,0 +1,44 @@
+import pandas as pd
+import numpy as np
+
+np.random.seed(42)
+
+# --- Réponses possibles ---
+reponses = ["Figures humaines", "Deux personnages", "Papillons", "Interaction", 
+            "Créatures", "Figures menaçantes", "Formes agressives", "Animaux puissants", "Visages"]
+
+# --- Labels ---
+labels = ["Anxiété", "Confiance", "Dépression", "Humeur instable", "Impulsivité", "Paranoïa"]
+
+# --- Réponses corrélées à chaque label ---
+label_corr = {
+    "Anxiété": ["Figures menaçantes", "Formes agressives", "Figures humaines"],
+    "Confiance": ["Papillons", "Visages", "Créatures"],
+    "Dépression": ["Figures humaines", "Interaction", "Animaux puissants"],
+    "Humeur instable": ["Deux personnages", "Interaction", "Papillons"],
+    "Impulsivité": ["Interaction", "Deux personnages", "Formes agressives"],
+    "Paranoïa": ["Figures menaçantes", "Formes agressives", "Visages"]
+}
+
+# --- Paramètres ---
+n_individus = 30000
+n_reponses = 10   # ✅ 10 réponses maintenant
+data = []
+
+for _ in range(n_individus):
+    label = np.random.choice(labels)
+    reponses_corr = np.random.choice(label_corr[label], size=6, replace=True)  # 6 corrélées
+    reponses_rand = np.random.choice(reponses, size=4, replace=True)          # 4 aléatoires
+    all_reponses = np.concatenate([reponses_corr, reponses_rand])
+    np.random.shuffle(all_reponses)
+    data.append(list(all_reponses) + [label])
+
+# --- Colonnes ---
+colonnes = [f"Réponse{i+1}" for i in range(n_reponses)] + ["Label"]
+df = pd.DataFrame(data, columns=colonnes)
+
+# --- Sauvegarde CSV ---
+df.to_csv("rorschach_30000_10reponses_corr1.csv", index=False, encoding="utf-8")
+
+print("CSV généré : rorschach_30000_10reponses_corr1.csv")
+print(df.head())

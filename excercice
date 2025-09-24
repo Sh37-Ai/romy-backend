@@ -1,0 +1,86 @@
+import os
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+# --- Fonctions Firebase ---
+def init_firebase(json_path: str):
+    """Initialise Firebase et retourne le client Firestore."""
+    try:
+        cred = credentials.Certificate(json_path)
+        firebase_admin.initialize_app(cred)
+        print("Connexion à Firebase réussie ✅")
+    except Exception as e:
+        print("Erreur lors de la connexion à Firebase :", e)
+        exit(1)
+    return firestore.client()
+
+def recuperer_donnees(db, collection_name: str):
+    """Récupère la liste des valeurs depuis la collection Firestore."""
+    choix_data = []
+    try:
+        docs = db.collection(collection_name).get()
+        if not docs:
+            print("Aucun document trouvé dans la collection.")
+        else:
+            for doc in docs:
+                data = doc.to_dict()
+                valeurs = data.get("valeur", [])
+                choix_data.append(valeurs)
+    except Exception as e:
+        print("Erreur lors de la récupération des documents :", e)
+        exit(1)
+    return choix_data
+
+def generer_test_example_depuis_firestore(liste_choix, colonnes):
+    """Transforme la première liste récupérée depuis Firestore en DataFrame prête pour le modèle."""
+    if not liste_choix:
+        raise ValueError("La liste de choix est vide.")
+    test_example = pd.DataFrame([liste_choix[0]], columns=colonnes)
+    test_encoded = pd.get_dummies(test_example).reindex(columns=X_encoded.columns, fill_value=0)
+    return test_encoded
+
+# --- Localiser le CSV ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(BASE_DIR, "rorschach_realistic.csv")
+print("Chemin utilisé :", CSV_PATH)
+
+# --- Charger le dataset ---
+df = pd.read_csv(CSV_PATH, encoding="utf-8")
+print("Aperçu des données :")
+print(df.head())
+
+# --- Séparer les features et le label ---
+X = df.drop("Label", axis=1)
+y = df["Label"]
+
+# --- One-Hot Encoding des réponses ---
+X_encoded = pd.get_dummies(X)
+
+# --- Séparer train/test ---
+X_train, X_test, y_train, y_test = train_test_split(
+    X_encoded, y, test_size=0.2, random_state=45
+)
+
+# --- Entraîner le Random Forest ---
+model = RandomForestClassifier(n_estimators=1000, random_state=45)
+model.fit(X_train, y_train)
+
+# --- Évaluation ---
+y_pred = model.predict(X_test)
+print("\nAccuracy:", accuracy_score(y_test, y_pred))
+print("\nRapport de classification :\n", classification_report(y_test, y_pred))
+
+# --- Firebase ---
+json_path = r"C:\Users\salah\TestIARumy\serviceAccountKey.json"
+collection_name = "choixx"
+db = init_firebase(json_path)
+liste_choix = recuperer_donnees(db, collection_name)
+
+# --- Exemple de test depuis Firestore ---
+test_encoded = generer_test_example_depuis_firestore(liste_choix, X.columns)
+prediction = model.predict(test_encoded)
+print("\nExemple de prédiction depuis Firebase :", prediction[0])
