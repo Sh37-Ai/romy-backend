@@ -1,8 +1,6 @@
 from flask import Flask, request, jsonify
 import os
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 import joblib
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -10,12 +8,9 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
-# --- Initialiser Firebase une seule fois ---
-JSON_PATH = os.environ.get("SERVICE_ACCOUNT_PATH")  # Render fournira ce secret
-if not JSON_PATH:
-    # Fallback local
-    JSON_PATH = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
 
+# --- Initialiser Firebase ---
+JSON_PATH = os.environ.get("SERVICE_ACCOUNT_PATH", "/run/secrets/serviceAccountKey.json")
 COLLECTION_NAME = "choixxx"
 
 if not firebase_admin._apps:
@@ -24,18 +19,16 @@ if not firebase_admin._apps:
     print("Connexion à Firebase réussie ✅")
 db = firestore.client()
 
-# --- Charger le dataset et entraîner le modèle une seule fois ---
+# --- Charger le modèle pré-entraîné compressé ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+model = joblib.load(MODEL_PATH)  # modèle compressé avec joblib.dump(model, "model.pkl", compress=3)
+
+# --- Charger les colonnes encodées pour préparer les nouvelles données ---
 CSV_PATH = os.path.join(BASE_DIR, "rorschach_30000_10reponses_corr1.csv")
 df = pd.read_csv(CSV_PATH, encoding="utf-8")
-
 X = df.drop("Label", axis=1)
-y = df["Label"]
 X_encoded = pd.get_dummies(X)
-
-X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=45)
-model = RandomForestClassifier(n_estimators=1000, random_state=45)
-model.fit(X_train, y_train)
 
 # --- Fonction pour récupérer les réponses d’un utilisateur ---
 def get_user_choices(user_uid):
@@ -71,4 +64,4 @@ def predict():
     return jsonify({"prediction": prediction[0]})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
