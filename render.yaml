@@ -1,1 +1,16 @@
-buildCommand: ./render-build.sh
+services:
+  - type: web
+    name: romy-backend
+    env: python
+    region: frankfurt  # tu peux changer selon ta localisation
+    plan: free         # ou starter si tu veux plus de ressources
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn __init__:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SERVICE_ACCOUNT_PATH
+        value: /etc/secrets/serviceAccountKey.json
+    disk:
+      name: model-storage
+      mountPath: /models
+      sizeGB: 2
