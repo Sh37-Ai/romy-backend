@@ -10,7 +10,10 @@ app = Flask(__name__)
 CORS(app)
 
 # --- Initialiser Firebase ---
-JSON_PATH = os.environ.get("SERVICE_ACCOUNT_PATH", "/run/secrets/serviceAccountKey.json")
+JSON_PATH = os.environ.get(
+    "SERVICE_ACCOUNT_PATH",
+    os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")  # fallback local
+)
 COLLECTION_NAME = "choixxx"
 
 if not firebase_admin._apps:
