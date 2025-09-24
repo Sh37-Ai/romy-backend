@@ -5,23 +5,32 @@ import joblib
 import firebase_admin
 from firebase_admin import credentials, firestore
 from flask_cors import CORS
+import tempfile
+import json
 
 app = Flask(__name__)
 CORS(app)
 
-# --- Initialiser Firebase ---
-JSON_PATH = os.environ.get("SERVICE_ACCOUNT_PATH", os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"))
+# --- Initialiser Firebase depuis la variable d'environnement ---
 COLLECTION_NAME = "choixxx"
+sa_json = os.environ.get("SERVICE_ACCOUNT_JSON")
+if not sa_json:
+    raise Exception("SERVICE_ACCOUNT_JSON non défini !")
 
-if not firebase_admin._apps:
-    cred = credentials.Certificate(JSON_PATH)
-    firebase_admin.initialize_app(cred)
+# Créer un fichier temporaire pour Firebase
+with tempfile.NamedTemporaryFile(mode='w+', delete=False) as f:
+    f.write(sa_json)
+    f.flush()
+    cred = credentials.Certificate(f.name)
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# --- Charger le modèle et colonnes ---
+# --- Charger le modèle et les colonnes encodées ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "model1.pkl")
 model = joblib.load(MODEL_PATH)
+
 CSV_PATH = os.path.join(BASE_DIR, "rorschach_30000_10reponses_corr1.csv")
 df = pd.read_csv(CSV_PATH, encoding="utf-8")
 X = df.drop("Label", axis=1)
@@ -50,10 +59,6 @@ def predict():
 @app.route("/healthz", methods=["GET"])
 def healthz():
     return "OK", 200
-
-@app.route("/")
-def home():
-    return "Hello Render!", 200
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
