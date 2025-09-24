@@ -24,7 +24,7 @@ db = firestore.client()
 
 # --- Charger le modèle pré-entraîné compressé ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+MODEL_PATH = os.path.join(BASE_DIR, "model1.pkl")
 model = joblib.load(MODEL_PATH)  # modèle compressé avec joblib.dump(model, "model.pkl", compress=3)
 
 # --- Charger les colonnes encodées pour préparer les nouvelles données ---
