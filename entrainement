@@ -1,0 +1,12 @@
+from sklearn.ensemble import RandomForestClassifier
+import pandas as pd
+import joblib
+
+df = pd.read_csv("rorschach_30000_10reponses_corr1.csv", encoding="utf-8")
+X = pd.get_dummies(df.drop("Label", axis=1))
+y = df["Label"]
+
+model = RandomForestClassifier(n_estimators=1000, random_state=45)
+model.fit(X, y)
+
+joblib.dump(model, "model.pkl")
