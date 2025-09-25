@@ -1,5 +1,3 @@
-FROM python:3.10-slim
-
 WORKDIR /app
 
 # Installer les dépendances système nécessaires
@@ -23,10 +21,9 @@ COPY . .
 # Définir les variables d'environnement
 ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_RUN_PORT=8000
 
-# Exposer le port
+# Exposer un port par défaut pour Docker
 EXPOSE 8000
 
-# Démarrer l'application avec gunicorn
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000"]
+# Démarrer l'application avec gunicorn en utilisant la variable PORT injectée par Railway
+CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-8000}"]
